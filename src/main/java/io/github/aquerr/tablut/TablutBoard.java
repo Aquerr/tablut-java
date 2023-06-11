@@ -3,8 +3,6 @@ package io.github.aquerr.tablut;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.String.format;
@@ -14,10 +12,18 @@ public class TablutBoard
     public static final int BOARD_SIZE = 9;
     public static final int TILE_SIZE = 60;
 
-    private final TablutBoardTile[][] board = new TablutBoardTile[BOARD_SIZE][BOARD_SIZE];
+    private TablutBoardTile[][] board;
+
+    private TablutGame tablutGame;
+
+    public TablutBoard(TablutGame tablutGame)
+    {
+        this.tablutGame = tablutGame;
+    }
 
     public void setup()
     {
+        this.board = new TablutBoardTile[BOARD_SIZE][BOARD_SIZE];
         for (int row = 1; row <= BOARD_SIZE; row++)
         {
             for (int column = 1; column <= BOARD_SIZE; column++)
@@ -99,7 +105,7 @@ public class TablutBoard
             return false;
         else if (to.getRow() != from.getRow() && to.getColumn() != from.getColumn())
             return false;
-        else if (fromTile.getPiece().get().getSide() != TablutGame.getGame().getCurrentMoveSide())
+        else if (fromTile.getPiece().get().getSide() != this.tablutGame.getCurrentMoveSide())
             return false;
         else if (isPieceInWay(from, to))
             return false;
@@ -199,7 +205,7 @@ public class TablutBoard
     {
         // Check 4 sides of this tile.
         Direction[] directions = Direction.values();
-        TablutPiece.Side currentSide = TablutGame.getGame().getCurrentMoveSide();
+        TablutPiece.Side currentSide = this.tablutGame.getCurrentMoveSide();
         BoardPosition currentTilePosition = BoardPosition.of(tile.getColumn(), tile.getRow());
 
         TablutBoardTile tileWithPieceToKill = null;
@@ -250,7 +256,7 @@ public class TablutBoard
         {
             throw new IllegalArgumentException("Can't move to given position!");
         }
-        else if (fromTile.getPiece().get().getSide() != TablutGame.getGame().getCurrentMoveSide())
+        else if (fromTile.getPiece().get().getSide() != this.tablutGame.getCurrentMoveSide())
         {
             throw new IllegalArgumentException("Wrong player!");
         }

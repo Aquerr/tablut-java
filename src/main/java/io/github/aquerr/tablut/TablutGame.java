@@ -1,39 +1,26 @@
 package io.github.aquerr.tablut;
 
-import io.github.aquerr.tablut.view.TablutBoardGui;
-import javafx.application.Application;
-import javafx.stage.Stage;
+import io.github.aquerr.tablut.multiplayer.TablutGameOnline;
+import io.github.aquerr.tablut.view.TablutGameGui;
 
-public class TablutGame extends Application
+public class TablutGame
 {
-    private final TablutBoard tablutBoard;
-    private final TablutBoardGui tablutBoardGui;
+    protected final TablutBoard tablutBoard;
+    protected final TablutGameGui tablutGameGui;
 
-    private TablutPiece.Side currentMoveSide = TablutPiece.Side.WHITE;
-    private TablutPiece.Side winner = null;
+    protected TablutPiece.Side currentMoveSide = TablutPiece.Side.WHITE;
+    protected TablutPiece.Side winner = null;
 
-    private static TablutGame INSTANCE = null;
+    protected static TablutGame INSTANCE = null;
 
-    public static TablutGame getGame()
-    {
-        return INSTANCE;
-    }
-
-    public TablutGame()
+    public TablutGame(TablutGameGui tablutGameGui)
     {
         if (INSTANCE != null)
             throw new IllegalStateException("The game is already started!");
 
         INSTANCE = this;
-        this.tablutBoard = new TablutBoard();
-        this.tablutBoardGui = new TablutBoardGui(this.tablutBoard);
-    }
-
-    @Override
-    public void start(Stage primaryStage) throws Exception
-    {
-        this.tablutBoard.setup();
-        this.tablutBoardGui.setup(primaryStage);
+        this.tablutBoard = new TablutBoard(this);
+        this.tablutGameGui = tablutGameGui;
     }
 
     public TablutPiece.Side getCurrentMoveSide()
@@ -59,9 +46,9 @@ public class TablutGame extends Application
             this.tablutBoard.movePiece(from, to);
 
             // Update gui
-            this.tablutBoardGui.redrawBoard();
+            this.tablutGameGui.redrawBoard();
 
-            // TODO: Check winner and block board...
+            // Check winner
             if (this.tablutBoard.checkBlackWin())
                 winner = TablutPiece.Side.BLACK;
             else if (this.tablutBoard.checkWhiteWin())
@@ -72,7 +59,8 @@ public class TablutGame extends Application
                 displayWinMessageAndLockBoard();
             }
 
-            TablutGame.getGame().switchMoveSide();
+            // Switch side
+            switchMoveSide();
         }
         catch (Exception exception)
         {
@@ -82,16 +70,16 @@ public class TablutGame extends Application
         }
     }
 
-    private void displayWinMessageAndLockBoard()
+    protected void displayWinMessageAndLockBoard()
     {
         System.out.println("The winner is: " + winner.name());
-        this.tablutBoardGui.displayWinMessageAndLockBoard();
+        this.tablutGameGui.displayWinMessageAndLockBoard();
     }
 
-    private void restore(TablutBoardSnapshot snapshot)
+    protected void restore(TablutBoardSnapshot snapshot)
     {
         this.tablutBoard.restore(snapshot);
-        this.tablutBoardGui.redrawBoard();
+        this.tablutGameGui.redrawBoard();
     }
 
     public TablutBoard getTablutBoard()
@@ -99,8 +87,26 @@ public class TablutGame extends Application
         return tablutBoard;
     }
 
-    public TablutBoardGui getTablutBoardGui()
+    public TablutGameGui getTablutBoardGui()
     {
-        return tablutBoardGui;
+        return tablutGameGui;
+    }
+
+    public void restart()
+    {
+        this.winner = null;
+        this.currentMoveSide = TablutPiece.Side.WHITE;
+        this.tablutBoard.setup();
+        this.tablutGameGui.redrawBoard();
+    }
+
+    public void close()
+    {
+        System.exit(0);
+    }
+
+    public boolean isOnline()
+    {
+        return this instanceof TablutGameOnline;
     }
 }

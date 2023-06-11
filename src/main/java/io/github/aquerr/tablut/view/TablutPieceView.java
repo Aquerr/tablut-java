@@ -35,7 +35,7 @@ public class TablutPieceView
         }
         else if (piece instanceof TablutKingPiece)
         {
-            color = Color.LIGHTGRAY;
+            color = Color.GRAY;
         }
 
         this.circle = new Circle((column - 1) * TILE_SIZE + (double) TILE_SIZE / 2,(row - 1) * TILE_SIZE + (double) TILE_SIZE / 2, (double) TILE_SIZE / 3);
@@ -67,7 +67,7 @@ public class TablutPieceView
     {
         circle.setOnMousePressed(mouseClickEvent -> {
 
-            if (TablutGame.getGame().getTablutBoardGui().isLocked())
+            if (TablutGameGui.getGameGui().isLocked())
                 return;
 
             // Highlight possible movements
@@ -77,7 +77,7 @@ public class TablutPieceView
 
         circle.setOnMouseDragged(mouseEvent ->
         {
-            if (TablutGame.getGame().getTablutBoardGui().isLocked())
+            if (TablutGameGui.getGameGui().isLocked())
                 return;
 
             double mouseX = mouseEvent.getX();
@@ -90,7 +90,7 @@ public class TablutPieceView
 
         circle.setOnMouseReleased(mouseDragEvent ->
         {
-            if (TablutGame.getGame().getTablutBoardGui().isLocked())
+            if (TablutGameGui.getGameGui().isLocked())
                 return;
 
             this.circle.setTranslateZ(BASE_TRANSLATE_Z);
@@ -101,7 +101,7 @@ public class TablutPieceView
             final int rectangleY = (int)circle.getCenterY();
 
             // Get tile the mouse is above
-            final Optional<TablutBoardTileView> optionalTile = TablutGame.getGame().getTablutBoardGui().getIntersectingTile(rectangleX, rectangleY);
+            final Optional<TablutBoardTileView> optionalTile = TablutGameGui.getGameGui().getIntersectingTile(rectangleX, rectangleY);
             if (optionalTile.isEmpty())
             {
                 // Bring figure back to initial position
@@ -112,13 +112,13 @@ public class TablutPieceView
             System.out.println("Mouse Released at Tile: row=" + optionalTile.get().getRow() + " column=" + optionalTile.get().getColumn() + " Mouse Pos: X: " + (mouseDragEvent.getX()) + " | Y: " + (mouseDragEvent.getY()));
 
             final TablutBoardTileView newTile = optionalTile.get();
-            final TablutBoardTileView lastTile = TablutGame.getGame().getTablutBoardGui().getIntersectingTile((int)lastX, (int)lastY).get();
+            final TablutBoardTileView lastTile = TablutGameGui.getGameGui().getIntersectingTile((int)lastX, (int)lastY).get();
 
             final BoardPosition fromPosition = BoardPosition.of(lastTile.getColumn(), lastTile.getRow());
             final BoardPosition toPosition = BoardPosition.of(newTile.getColumn(), newTile.getRow());
 
             // Check if chess figure can move to the tile the mouse is above.
-            if (!TablutGame.getGame().getTablutBoard().canMoveTo(fromPosition, toPosition))
+            if (!TablutGameGui.getGameGui().getTablutGame().getTablutBoard().canMoveTo(fromPosition, toPosition))
             {
                 // Bring figure back to initial position
                 restoreLastPosition();
@@ -132,7 +132,7 @@ public class TablutPieceView
                 return;
             }
 
-            TablutGame.getGame().movePiece(fromPosition, toPosition);
+            TablutGameGui.getGameGui().getTablutGame().movePiece(fromPosition, toPosition);
         });
 
         tablutPieceView.getCircle().addEventHandler(MouseEvent.MOUSE_ENTERED, new TablutPieceView.HighlightEventHandler(circle, true));
@@ -142,7 +142,7 @@ public class TablutPieceView
     private void highlightPossibleMovements()
     {
         System.out.println("Highlighting possible movements...");
-        TablutGame game = TablutGame.getGame();
+        TablutGame game = TablutGameGui.getGameGui().getTablutGame();
         final TablutBoardTileView currentTile = game.getTablutBoardGui().getIntersectingTile((int)lastX, (int)lastY).get();
         final BoardPosition currentPosition = BoardPosition.of(currentTile.getColumn(), currentTile.getRow());
         for (final TablutBoardTileView tile : game.getTablutBoardGui().getBoardTileViews())
@@ -157,7 +157,7 @@ public class TablutPieceView
     private void unHighlightPossibleMovements()
     {
         System.out.println("Hiding possible movements...");
-        TablutGame game = TablutGame.getGame();
+        TablutGame game = TablutGameGui.getGameGui().getTablutGame();
         final TablutBoardTileView currentTile = game.getTablutBoardGui().getIntersectingTile((int)lastX, (int)lastY).get();
         final BoardPosition currentPosition = BoardPosition.of(currentTile.getColumn(), currentTile.getRow());
         for (final TablutBoardTileView tile : game.getTablutBoardGui().getBoardTileViews())

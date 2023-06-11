@@ -1,9 +1,13 @@
 package io.github.aquerr.tablut.view;
 
-import io.github.aquerr.tablut.BoardPosition;
 import io.github.aquerr.tablut.TablutBoard;
+import io.github.aquerr.tablut.TablutGame;
 import io.github.aquerr.tablut.TablutPiece;
 import io.github.aquerr.tablut.localization.Localization;
+import io.github.aquerr.tablut.multiplayer.TablutGameHost;
+import io.github.aquerr.tablut.multiplayer.TablutGameOnline;
+import io.github.aquerr.tablut.multiplayer.TablutGameRemoteClient;
+import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -11,10 +15,12 @@ import javafx.scene.Scene;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -25,16 +31,22 @@ import java.util.stream.Stream;
 import static io.github.aquerr.tablut.TablutBoard.BOARD_SIZE;
 import static io.github.aquerr.tablut.TablutBoard.TILE_SIZE;
 
-public class TablutBoardGui
+public class TablutGameGui extends Application
 {
+    private static TablutGameGui INSTANCE = null;
+    public static TablutGameGui getGameGui()
+    {
+        return INSTANCE;
+    }
+
     private static final TablutBoardTileView[][] BOARD_TILES = new TablutBoardTileView[BOARD_SIZE][BOARD_SIZE];
 
-    private static final Logger logger = Logger.getLogger(TablutBoardGui.class.getName());
+    private static final Logger logger = Logger.getLogger(TablutGameGui.class.getName());
     private static final int WINDOW_HEIGHT = 680;
     private static final int WINDOW_WIDTH = 660;
     private static final int MENU_BAR_HEIGHT = 20;
 
-    private final TablutBoard tablutBoard;
+    private TablutGame tablutGame;
     private Stage primaryStage;
     private VBox root;
     private Group mainGroup;
@@ -44,12 +56,25 @@ public class TablutBoardGui
 
     private boolean locked = false;
 
-    public TablutBoardGui(TablutBoard tablutBoard)
+    public TablutGameGui()
     {
-        this.tablutBoard = tablutBoard;
+        if (INSTANCE != null)
+            throw new IllegalStateException("The game is already started!");
+
+        INSTANCE = this;
     }
 
     public void setup(Stage primaryStage)
+    {
+        initialSetup(primaryStage);
+    }
+
+    public TablutGame getTablutGame()
+    {
+        return tablutGame;
+    }
+
+    private void initialSetup(Stage primaryStage)
     {
         this.primaryStage = primaryStage;
         this.root = new VBox();
@@ -91,7 +116,7 @@ public class TablutBoardGui
         Function<Color, Color> colorChanger = (color) -> color == Color.NAVAJOWHITE ? Color.SADDLEBROWN : Color.NAVAJOWHITE;
         Color color = Color.SADDLEBROWN;
 
-        for (final TablutBoard.TablutBoardTile tile : this.tablutBoard.getBoardTiles())
+        for (final TablutBoard.TablutBoardTile tile : this.tablutGame.getTablutBoard().getBoardTiles())
         {
             final int row = tile.getRow();
             final int column = tile.getColumn();
@@ -114,9 +139,24 @@ public class TablutBoardGui
     {
         Menu gameMenu = new Menu(Localization.translate("menu.game"));
 
+        MenuItem newGame = new MenuItem(Localization.translate("menu.single-player.new-game"));
+        newGame.setOnAction(actionEvent -> this.tablutGame.restart());
+
+        Menu singlePlayerMenu = new Menu(Localization.translate("menu.single-player"));
+        singlePlayerMenu.getItems().add(newGame);
+
+        Menu multiplayerMenu = new Menu(Localization.translate("menu.multi-player"));
+        MenuItem hostGame = new MenuItem(Localization.translate("menu.multi-player.host-game"));
+        hostGame.setOnAction(actionEvent -> hostMultiplayerGame());
+        MenuItem joinGame = new MenuItem(Localization.translate("menu.multi-player.join-game"));
+        joinGame.setOnAction(actionEvent -> joinMultiplayerGame());
+        multiplayerMenu.getItems().addAll(hostGame, joinGame);
+
+        SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
+
         MenuItem exit = new MenuItem(Localization.translate("menu.exit"));
         exit.setOnAction(actionEvent -> closeGame());
-        gameMenu.getItems().add(exit);
+        gameMenu.getItems().addAll(singlePlayerMenu, multiplayerMenu, separatorMenuItem, exit);
 
         MenuBar menuBar = new MenuBar();
         menuBar.getMenus().add(gameMenu);
@@ -149,19 +189,7 @@ public class TablutBoardGui
     {
         logger.info("Closing game...");
         Platform.exit();
-        System.exit(0);
-    }
-
-    private TablutBoardTileView getTileAt(BoardPosition position)
-    {
-        if (position.getRow() > BOARD_SIZE
-                || position.getRow() < 0
-                || position.getColumn() > BOARD_SIZE
-                || position.getColumn() < 0)
-        {
-            throw new IllegalArgumentException("Out of board bounds");
-        }
-        return BOARD_TILES[position.getRow() - 1][position.getColumn() - 1];
+        this.tablutGame.close();
     }
 
     public void redrawBoard()
@@ -174,6 +202,7 @@ public class TablutBoardGui
 
     public void displayWinMessageAndLockBoard()
     {
+        //TODO: Display win message popup.
         setLocked(true);
     }
 
@@ -185,5 +214,35 @@ public class TablutBoardGui
     public boolean isLocked()
     {
         return locked;
+    }
+
+    @Override
+    public void start(Stage primaryStage) throws Exception
+    {
+        this.tablutGame = new TablutGame(this);
+        this.tablutGame.getTablutBoard().setup();
+        setup(primaryStage);
+    }
+
+    private void hostMultiplayerGame()
+    {
+        System.out.println("Hosting a multiplayer game...");
+        TablutGameHost tablutGameHost = new TablutGameHost(this);
+        try
+        {
+            tablutGameHost.hostGame();
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+        this.tablutGame = tablutGameHost;
+    }
+
+    private void joinMultiplayerGame()
+    {
+        System.out.println("Showing the popup to enter the ip address.");
+        TablutGameRemoteClient tablutGameRemoteClient = new TablutGameRemoteClient(this);
+        this.tablutGame = tablutGameRemoteClient;
     }
 }
