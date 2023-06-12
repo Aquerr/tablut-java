@@ -1,9 +1,10 @@
 package io.github.aquerr.tablut.multiplayer;
 
 import io.github.aquerr.tablut.view.TablutGameGui;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.ServerSocket;
 
 public class TablutGameHost extends TablutGameOnline
@@ -21,7 +22,7 @@ public class TablutGameHost extends TablutGameOnline
 
     public void hostGame() throws IOException
     {
-        releaseConnections();
+        closeCleanup();
         startServerSocket();
         serverSocketThread = new Thread(() -> {
             try
@@ -44,7 +45,7 @@ public class TablutGameHost extends TablutGameOnline
         {
             try
             {
-                releaseConnections();
+                closeCleanup();
             }
             catch (IOException e)
             {
@@ -63,8 +64,12 @@ public class TablutGameHost extends TablutGameOnline
         this.connectedPlayerInputStreamThread = new Thread(() -> {
             try
             {
-                InputStreamReader inputStreamReader = this.connectedPlayer.getInputStreamReader();
-
+                BufferedReader bufferedReader = this.connectedPlayer.getBufferedReader();
+                String stringJson = "";
+                while ((stringJson = bufferedReader.readLine()) != null)
+                {
+                    handlePacket(PacketAdapter.parse(new JSONObject(stringJson)));
+                }
             }
             catch (IOException e)
             {
@@ -74,23 +79,26 @@ public class TablutGameHost extends TablutGameOnline
         this.connectedPlayerInputStreamThread.start();
     }
 
-    private void releaseConnections() throws IOException
+    private void closeCleanup() throws IOException
     {
-        if (this.connectedPlayer != null)
-        {
-            this.connectedPlayer.close();
-            this.connectedPlayer = null;
-        }
-
         if (this.serverSocket != null)
         {
             this.serverSocket.close();
             this.serverSocket = null;
         }
+    }
 
-        if (this.connectedPlayerInputStreamThread != null)
+    @Override
+    public void close()
+    {
+        try
         {
-            this.connectedPlayerInputStreamThread.interrupt();
+            closeCleanup();
         }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+        super.close();
     }
 }

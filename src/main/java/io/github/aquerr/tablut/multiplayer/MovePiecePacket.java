@@ -6,6 +6,8 @@ import java.util.Objects;
 
 public class MovePiecePacket implements Packet
 {
+    private final String type = MovePiecePacket.class.getSimpleName();
+
     private BoardPosition from;
     private BoardPosition to;
 
@@ -38,6 +40,11 @@ public class MovePiecePacket implements Packet
     public void setTo(BoardPosition to)
     {
         this.to = to;
+    }
+
+    public String getType()
+    {
+        return type;
     }
 
     @Override

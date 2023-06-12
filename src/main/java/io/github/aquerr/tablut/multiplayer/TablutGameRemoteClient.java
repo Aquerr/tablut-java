@@ -8,4 +8,10 @@ public class TablutGameRemoteClient extends TablutGameOnline
     {
         super(tablutGameGui);
     }
+
+    @Override
+    public void close()
+    {
+        super.close();
+    }
 }

@@ -8,7 +8,7 @@ import io.github.aquerr.tablut.view.TablutGameGui;
 
 import java.io.IOException;
 
-public class TablutGameOnline extends TablutGame
+public abstract class TablutGameOnline extends TablutGame
 {
     protected TablutMultiplayerConnection connectedPlayer;
     protected Thread connectedPlayerInputStreamThread;
@@ -48,7 +48,6 @@ public class TablutGameOnline extends TablutGame
                 sendPacket(new WinPacket(currentMoveSide));
             }
 
-
             // Switch side
             switchMoveSide();
         }
@@ -65,6 +64,10 @@ public class TablutGameOnline extends TablutGame
         if (packet instanceof MovePiecePacket movePiecePacket)
         {
             handleMovePiecePacket(movePiecePacket);
+        }
+        else if (packet instanceof WinPacket winPacket)
+        {
+            displayWinMessageAndLockBoard();
         }
         else
         {
@@ -118,8 +121,7 @@ public class TablutGameOnline extends TablutGame
     {
         try
         {
-            //TODO: Convert packet to JSON.
-            this.connectedPlayer.getPrintWriter().println(packet);
+            this.connectedPlayer.getPrintWriter().println(PacketAdapter.toJSONObject(packet).toString());
         }
         catch (IOException e)
         {
@@ -130,12 +132,25 @@ public class TablutGameOnline extends TablutGame
     @Override
     public void close()
     {
-        closeConnections();
+        if (this.connectedPlayer != null)
+        {
+            try
+            {
+                this.connectedPlayer.close();
+            }
+            catch (IOException e)
+            {
+                e.printStackTrace();
+            }
+            this.connectedPlayer = null;
+        }
+
+        if (this.connectedPlayerInputStreamThread != null)
+        {
+            this.connectedPlayerInputStreamThread.interrupt();
+            this.connectedPlayerInputStreamThread = null;
+        }
+
         super.close();
-    }
-
-    private void closeConnections()
-    {
-
     }
 }

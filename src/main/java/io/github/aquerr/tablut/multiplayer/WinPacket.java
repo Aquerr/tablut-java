@@ -6,6 +6,8 @@ import java.util.Objects;
 
 public class WinPacket implements Packet
 {
+    private final String type = MovePiecePacket.class.getSimpleName();
+
     private TablutPiece.Side side;
 
     public WinPacket()
@@ -26,6 +28,11 @@ public class WinPacket implements Packet
     public void setSide(TablutPiece.Side side)
     {
         this.side = side;
+    }
+
+    public String getType()
+    {
+        return type;
     }
 
     @Override
