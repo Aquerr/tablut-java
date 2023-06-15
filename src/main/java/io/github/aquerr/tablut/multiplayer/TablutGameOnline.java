@@ -5,7 +5,10 @@ import io.github.aquerr.tablut.TablutBoardSnapshot;
 import io.github.aquerr.tablut.TablutGame;
 import io.github.aquerr.tablut.TablutPiece;
 import io.github.aquerr.tablut.view.TablutGameGui;
+import javafx.application.Platform;
+import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 
 public abstract class TablutGameOnline extends TablutGame
@@ -50,13 +53,25 @@ public abstract class TablutGameOnline extends TablutGame
 
             // Switch side
             switchMoveSide();
+            lockBoard();
         }
         catch (Exception exception)
         {
             // Rollback move...
+            System.out.println(exception.getMessage());
             System.out.println("Undoing last move...");
             restore(tablutBoardSnapshot);
         }
+    }
+
+    protected void lockBoard()
+    {
+        this.tablutGameGui.setLocked(true);
+    }
+
+    protected void unlockBoard()
+    {
+        this.tablutGameGui.setLocked(false);
     }
 
     public void handlePacket(Packet packet)
@@ -88,7 +103,7 @@ public abstract class TablutGameOnline extends TablutGame
             this.tablutBoard.movePiece(movePiecePacket.getFrom(), movePiecePacket.getTo());
 
             // Update gui
-            this.tablutGameGui.redrawBoard();
+            Platform.runLater(this.tablutGameGui::redrawBoard);
 
             // Check winner
             if (this.tablutBoard.checkBlackWin())
@@ -103,6 +118,7 @@ public abstract class TablutGameOnline extends TablutGame
 
             // Switch side
             switchMoveSide();
+            unlockBoard();
         }
         catch (Exception exception)
         {
@@ -121,7 +137,8 @@ public abstract class TablutGameOnline extends TablutGame
     {
         try
         {
-            this.connectedPlayer.getPrintWriter().println(PacketAdapter.toJSONObject(packet).toString());
+            this.connectedPlayer.getPrintWriter().println(PacketAdapter.toJSONObject(packet));
+            this.connectedPlayer.getPrintWriter().flush();
         }
         catch (IOException e)
         {
@@ -152,5 +169,31 @@ public abstract class TablutGameOnline extends TablutGame
         }
 
         super.close();
+    }
+
+    protected void handleMessages()
+    {
+        this.connectedPlayerInputStreamThread = new Thread(() -> {
+            try
+            {
+                BufferedReader bufferedReader = this.connectedPlayer.getBufferedReader();
+                String stringJson = "";
+                while ((stringJson = bufferedReader.readLine()) != null)
+                {
+                    System.out.println("Received Message: " + stringJson);
+                    handlePacket(PacketAdapter.parse(new JSONObject(stringJson)));
+                }
+            }
+            catch (IOException e)
+            {
+                throw new RuntimeException(e);
+            }
+        });
+        this.connectedPlayerInputStreamThread.start();
+    }
+
+    public TablutMultiplayerConnection getConnectedPlayer()
+    {
+        return connectedPlayer;
     }
 }

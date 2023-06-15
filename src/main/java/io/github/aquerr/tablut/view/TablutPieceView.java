@@ -20,6 +20,7 @@ import static io.github.aquerr.tablut.view.TablutBoardTileView.HighlightTileEven
 public class TablutPieceView
 {
     private final Circle circle;
+    private final TablutPiece.Side side;
 
     // For dragging
     private double lastX;
@@ -28,6 +29,7 @@ public class TablutPieceView
     private static final int BASE_TRANSLATE_Z = 10;
     public TablutPieceView(int row, int column, TablutPiece piece)
     {
+        this.side = piece.getSide();
         Color color = Color.GHOSTWHITE;
         if (piece.getSide() == TablutPiece.Side.BLACK)
         {
@@ -67,7 +69,7 @@ public class TablutPieceView
     {
         circle.setOnMousePressed(mouseClickEvent -> {
 
-            if (TablutGameGui.getGameGui().isLocked())
+            if (!canMovePiece())
                 return;
 
             // Highlight possible movements
@@ -77,7 +79,7 @@ public class TablutPieceView
 
         circle.setOnMouseDragged(mouseEvent ->
         {
-            if (TablutGameGui.getGameGui().isLocked())
+            if (!canMovePiece())
                 return;
 
             double mouseX = mouseEvent.getX();
@@ -90,7 +92,7 @@ public class TablutPieceView
 
         circle.setOnMouseReleased(mouseDragEvent ->
         {
-            if (TablutGameGui.getGameGui().isLocked())
+            if (!canMovePiece())
                 return;
 
             this.circle.setTranslateZ(BASE_TRANSLATE_Z);
@@ -137,6 +139,17 @@ public class TablutPieceView
 
         tablutPieceView.getCircle().addEventHandler(MouseEvent.MOUSE_ENTERED, new TablutPieceView.HighlightEventHandler(circle, true));
         tablutPieceView.getCircle().addEventHandler(MouseEvent.MOUSE_EXITED, new TablutPieceView.HighlightEventHandler(circle, false));
+    }
+
+    private boolean canMovePiece()
+    {
+        if (TablutGameGui.getGameGui().isLocked())
+            return false;
+
+        if (TablutGameGui.getGameGui().getTablutGame().getCurrentMoveSide() != this.side)
+            return false;
+
+        return true;
     }
 
     private void highlightPossibleMovements()

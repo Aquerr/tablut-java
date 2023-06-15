@@ -3,6 +3,8 @@ package io.github.aquerr.tablut;
 import io.github.aquerr.tablut.multiplayer.TablutGameOnline;
 import io.github.aquerr.tablut.view.TablutGameGui;
 
+import java.util.Optional;
+
 public class TablutGame
 {
     protected final TablutBoard tablutBoard;
@@ -11,14 +13,8 @@ public class TablutGame
     protected TablutPiece.Side currentMoveSide = TablutPiece.Side.WHITE;
     protected TablutPiece.Side winner = null;
 
-    protected static TablutGame INSTANCE = null;
-
     public TablutGame(TablutGameGui tablutGameGui)
     {
-        if (INSTANCE != null)
-            throw new IllegalStateException("The game is already started!");
-
-        INSTANCE = this;
         this.tablutBoard = new TablutBoard(this);
         this.tablutGameGui = tablutGameGui;
     }
@@ -26,6 +22,11 @@ public class TablutGame
     public TablutPiece.Side getCurrentMoveSide()
     {
         return currentMoveSide;
+    }
+
+    public Optional<TablutPiece.Side> getWinner()
+    {
+        return Optional.ofNullable(this.winner);
     }
 
     public void switchMoveSide()

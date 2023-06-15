@@ -12,12 +12,21 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SeparatorMenuItem;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.stage.Popup;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -53,6 +62,9 @@ public class TablutGameGui extends Application
     private Scene mainScene;
     private Group boardGroup;
     private Group piecesGroup;
+
+
+    private Popup waitingForPlayerPopup;
 
     private boolean locked = false;
 
@@ -149,7 +161,7 @@ public class TablutGameGui extends Application
         MenuItem hostGame = new MenuItem(Localization.translate("menu.multi-player.host-game"));
         hostGame.setOnAction(actionEvent -> hostMultiplayerGame());
         MenuItem joinGame = new MenuItem(Localization.translate("menu.multi-player.join-game"));
-        joinGame.setOnAction(actionEvent -> joinMultiplayerGame());
+        joinGame.setOnAction(actionEvent -> showJoinIpAdressPopup());
         multiplayerMenu.getItems().addAll(hostGame, joinGame);
 
         SeparatorMenuItem separatorMenuItem = new SeparatorMenuItem();
@@ -202,8 +214,23 @@ public class TablutGameGui extends Application
 
     public void displayWinMessageAndLockBoard()
     {
-        //TODO: Display win message popup.
         setLocked(true);
+        displayWinMessage();
+    }
+
+    private void displayWinMessage()
+    {
+        Popup popup = new Popup();
+        VBox vBox = new VBox();
+        vBox.setPadding(new Insets(2, 2, 2, 2));
+        vBox.setStyle("-fx-border-width: 1px");
+        vBox.setStyle("-fx-border-color: black");
+        vBox.setBackground(new Background(new BackgroundFill(Color.NAVAJOWHITE, null, null)));
+        Label label = new Label(this.getTablutGame().getWinner().orElse(null) + " won the game!");
+        vBox.getChildren().add(label);
+        popup.getContent().add(vBox);
+        popup.setAutoHide(true);
+        popup.show(this.primaryStage);
     }
 
     public void setLocked(boolean locked)
@@ -214,6 +241,11 @@ public class TablutGameGui extends Application
     public boolean isLocked()
     {
         return locked;
+    }
+
+    public Popup getWaitingForPlayerPopup()
+    {
+        return waitingForPlayerPopup;
     }
 
     @Override
@@ -227,7 +259,14 @@ public class TablutGameGui extends Application
     private void hostMultiplayerGame()
     {
         System.out.println("Hosting a multiplayer game...");
+        if (this.tablutGame instanceof TablutGameOnline)
+        {
+            this.tablutGame.close();
+            this.tablutGame = null;
+        }
+
         TablutGameHost tablutGameHost = new TablutGameHost(this);
+        tablutGameHost.restart();
         try
         {
             tablutGameHost.hostGame();
@@ -237,12 +276,78 @@ public class TablutGameGui extends Application
             throw new RuntimeException(e);
         }
         this.tablutGame = tablutGameHost;
+
+        if (waitingForPlayerPopup == null)
+        {
+            waitingForPlayerPopup = new Popup();
+            VBox vBox = new VBox();
+            vBox.setSpacing(2.0);
+            vBox.setPadding(new Insets(2, 2, 2, 2));
+            vBox.setStyle("-fx-border-width: 1px");
+            vBox.setStyle("-fx-border-color: black");
+            vBox.setBackground(new Background(new BackgroundFill(Color.NAVAJOWHITE, null, null)));
+
+            Label waitingLabel = new Label("Waiting for palyer to join...");
+            vBox.getChildren().add(waitingLabel);
+
+            waitingForPlayerPopup.getContent().add(vBox);
+        }
+        waitingForPlayerPopup.show(this.primaryStage);
     }
 
-    private void joinMultiplayerGame()
+    private void showJoinIpAdressPopup()
     {
         System.out.println("Showing the popup to enter the ip address.");
+        Popup popup = new Popup();
+
+        VBox vBox = new VBox();
+        vBox.setSpacing(2.0);
+        vBox.setPadding(new Insets(2, 2, 2, 2));
+        vBox.setStyle("-fx-border-width: 1px");
+        vBox.setStyle("-fx-border-color: black");
+        vBox.setBackground(new Background(new BackgroundFill(Color.NAVAJOWHITE, null, null)));
+
+        TextField ipAddressTextField = new TextField();
+        ipAddressTextField.prefWidth(200);
+
+        Button connectButton = new Button("Connect");
+
+        connectButton.setOnAction(actionEvent ->
+        {
+            System.out.println("Joining game...");
+            joinOnlineGame(ipAddressTextField.getText());
+            popup.hide();
+        });
+        Button cancelButton = new Button("Cancel");
+        cancelButton.setOnAction(actionEvent ->
+        {
+            System.out.println("Hiding popup...");
+            popup.hide();
+        });
+
+        HBox hBox = new HBox();
+        Region region = new Region();
+        hBox.getChildren().addAll(connectButton, region, cancelButton);
+        HBox.setHgrow(region, Priority.ALWAYS);
+
+        vBox.getChildren().addAll(ipAddressTextField, hBox);
+        popup.getContent().add(vBox);
+
+        popup.show(this.primaryStage);
+    }
+
+    private void joinOnlineGame(String ipAddress)
+    {
         TablutGameRemoteClient tablutGameRemoteClient = new TablutGameRemoteClient(this);
+        tablutGameRemoteClient.restart();
+        try
+        {
+            tablutGameRemoteClient.connect(ipAddress);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
         this.tablutGame = tablutGameRemoteClient;
     }
 }

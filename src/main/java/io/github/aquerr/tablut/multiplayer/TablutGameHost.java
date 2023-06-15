@@ -1,9 +1,8 @@
 package io.github.aquerr.tablut.multiplayer;
 
 import io.github.aquerr.tablut.view.TablutGameGui;
-import org.json.JSONObject;
+import javafx.application.Platform;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.net.ServerSocket;
 
@@ -29,6 +28,7 @@ public class TablutGameHost extends TablutGameOnline
             {
                 waitForConnection();
                 handleMessages();
+                Platform.runLater(() -> TablutGameGui.getGameGui().getWaitingForPlayerPopup().hide());
             }
             catch (IOException e)
             {
@@ -57,26 +57,6 @@ public class TablutGameHost extends TablutGameOnline
     private void waitForConnection() throws IOException
     {
         this.connectedPlayer = new TablutMultiplayerConnection(this.serverSocket.accept());
-    }
-
-    private void handleMessages()
-    {
-        this.connectedPlayerInputStreamThread = new Thread(() -> {
-            try
-            {
-                BufferedReader bufferedReader = this.connectedPlayer.getBufferedReader();
-                String stringJson = "";
-                while ((stringJson = bufferedReader.readLine()) != null)
-                {
-                    handlePacket(PacketAdapter.parse(new JSONObject(stringJson)));
-                }
-            }
-            catch (IOException e)
-            {
-                throw new RuntimeException(e);
-            }
-        });
-        this.connectedPlayerInputStreamThread.start();
     }
 
     private void closeCleanup() throws IOException
