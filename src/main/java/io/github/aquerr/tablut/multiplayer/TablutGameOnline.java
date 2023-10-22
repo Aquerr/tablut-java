@@ -113,7 +113,7 @@ public abstract class TablutGameOnline extends TablutGame
 
             if (winner != null)
             {
-                displayWinMessageAndLockBoard();
+                Platform.runLater(this::displayWinMessageAndLockBoard);
             }
 
             // Switch side
