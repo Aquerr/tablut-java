@@ -4,15 +4,28 @@ import io.github.aquerr.tablut.BoardPosition;
 import io.github.aquerr.tablut.TablutBoardSnapshot;
 import io.github.aquerr.tablut.TablutGame;
 import io.github.aquerr.tablut.TablutPiece;
+import io.github.aquerr.tablut.multiplayer.packet.MovePiecePacket;
+import io.github.aquerr.tablut.multiplayer.packet.Packet;
+import io.github.aquerr.tablut.multiplayer.packet.PacketAdapter;
+import io.github.aquerr.tablut.multiplayer.packet.WinPacket;
 import io.github.aquerr.tablut.view.TablutGameGui;
 import javafx.application.Platform;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.Map;
+import java.util.function.Consumer;
+
+import static java.util.Optional.ofNullable;
 
 public abstract class TablutGameOnline extends TablutGame
 {
+    private final Map<Class<? extends Packet>, Consumer<Packet>> PACKET_HANDLERS = Map.of(
+            MovePiecePacket.class, (packet) -> handleMovePiecePacket((MovePiecePacket) packet),
+            WinPacket.class, (packet) -> displayWinMessageAndLockBoard()
+    );
+
     protected TablutMultiplayerConnection connectedPlayer;
     protected Thread connectedPlayerInputStreamThread;
 
@@ -76,18 +89,9 @@ public abstract class TablutGameOnline extends TablutGame
 
     public void handlePacket(Packet packet)
     {
-        if (packet instanceof MovePiecePacket movePiecePacket)
-        {
-            handleMovePiecePacket(movePiecePacket);
-        }
-        else if (packet instanceof WinPacket winPacket)
-        {
-            displayWinMessageAndLockBoard();
-        }
-        else
-        {
-            throw new IllegalStateException("Received unknown packet: " + packet);
-        }
+        ofNullable(PACKET_HANDLERS.get(packet.getClass()))
+                .orElseThrow(() -> new IllegalStateException("Received unknown packet: " + packet))
+                .accept(packet);
     }
 
     private void handleMovePiecePacket(MovePiecePacket movePiecePacket)
@@ -126,11 +130,6 @@ public abstract class TablutGameOnline extends TablutGame
             System.out.println("Undoing last move...");
             restore(tablutBoardSnapshot);
         }
-    }
-
-    private void handleWinPacket(WinPacket winPacket)
-    {
-        displayWinMessageAndLockBoard();
     }
 
     private void sendPacket(Packet packet)
