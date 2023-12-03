@@ -99,6 +99,7 @@ public class TablutGame
         this.currentMoveSide = TablutPiece.Side.WHITE;
         this.tablutBoard.setup();
         this.tablutGameGui.redrawBoard();
+        this.tablutGameGui.setLocked(false);
     }
 
     public void close()
